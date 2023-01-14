@@ -2,6 +2,8 @@ import rclpy
 from geometry_msgs.msg import Twist, Vector3
 from rclpy.node import Node
 
+import tf2_ros
+
 import os
 import cv2
 import numpy as np
@@ -100,6 +102,22 @@ class CatFollower(Node):
             self.laser_callback,
             10)
         self.laser_subscription  # prevent unused variable warning
+
+    def _euler(self, q):
+        t0 = +2.0 * (q.w * q.x + q.y * q.z)
+        t1 = +1.0 - 2.0 * (q.x * q.x + q.y * q.y)
+        roll_x = np.arctan2(t0, t1)
+
+        t2 = +2.0 * (q.w * q.y - q.z * q.x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = np.arcsin(t2)
+
+        t3 = +2.0 * (q.w * q.z + q.x * q.y)
+        t4 = +1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        yaw_z = np.arctan2(t3, t4)
+
+        return Vector3(x=roll_x, y=pitch_y, z=yaw_z)
 
     def get_framerate(self, frame_rate):
         if frame_rate <= 0:
@@ -220,6 +238,32 @@ class CatFollower(Node):
     def laser_callback(self, msg):
         if not msg.ranges:
             return
+
+        closest = min(msg.ranges)
+
+        if closest >= float('inf'):
+            return
+
+        closest_angle = msg.ranges.index(closest) * msg.angle_increment
+
+        try:
+            trans = self.tfBuffer.lookup_transform('odom',
+                                                   'base_scan',
+                                                   rclpy.time.Time())
+        except (tf2_ros.LookupException,
+                tf2_ros.ConnectivityException,
+                tf2_ros.ExtrapolationException):
+            return
+
+        yaw = euler(trans.transform.rotation).z
+
+        goal_x = closest * np.cos(closest_angle)
+        goal_y = closest * np.sin(closest_angle)
+        goal = Point(x=goal_x, y=goal_y, z=0.0)
+
+        self.goal = point_transform(goal, trans.transform.translation, yaw)
+        self.goal.z = 0.0
+        self.marker_maker()
 
     # TODO: image callback
     def image_callback(self):
