@@ -255,7 +255,7 @@ class CatFollower(Node):
                 tf2_ros.ExtrapolationException):
             return
 
-        yaw = euler(trans.transform.rotation).z
+        yaw = _euler(trans.transform.rotation).z
 
         goal_x = closest * np.cos(closest_angle)
         goal_y = closest * np.sin(closest_angle)
