@@ -11,6 +11,7 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, LaserScan
 from rcl_interfaces.msg import SetParametersResult
 
+CV2_THRESHOLD = 127
 
 class CatFollower(Node):
     def __init__(self):
@@ -271,8 +272,34 @@ class CatFollower(Node):
         self.marker_maker()
 
     # TODO: image callback
-    def image_callback(self):
-        pass
+    def image_callback(self, msg):
+        frame = CvBridge().imgmsg_to_cv2(msg)
+        gray_picture = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        	
+        (thresh, black_and_white_picture) = cv2.threshold(gray_picture, CV2_THRESHOLD, 255, cv2.THRESH_BINARY_INV)
+
+        cv2_moments = cv2.moments(black_and_white_picture)
+
+        if cv2_moments["m00"] != 0:
+            x = int(cv2_moments["m10"] / cv2_moments["m00"])
+            y = int(cv2_moments["m01"] / cv2_moments["m00"])
+            self.is_cat_in_frame = True
+        else:
+            x = 0
+            y = 0
+
+        if self.is_cat_in_frame: self.angular_speed = np.arctan((self.u0 - x) / self.f)
+
+        cv2.circle(black_and_white_picture, (x, y), 3, (118, 208, 16), -1)
+
+        image_message = CvBridge().cv2_to_imgmsg(black_and_white_picture, encoding="mono8")
+        image_message.header = msg.header
+        self.frame_pub.publish(image_message)
+
+        cmdMsg = Twist() 
+        cmdMsg.angular.z = float(self.angular_speed)
+
+        self.cmd_pub.publish(cmdMsg)
 
 
 def main(args=None):
