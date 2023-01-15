@@ -1,5 +1,5 @@
 import rclpy
-from geometry_msgs.msg import Twist, Vector3
+from geometry_msgs.msg import Twist, Vector3, Point
 from rclpy.node import Node
 
 import tf2_ros
@@ -118,6 +118,11 @@ class CatFollower(Node):
         yaw_z = np.arctan2(t3, t4)
 
         return Vector3(x=roll_x, y=pitch_y, z=yaw_z)
+
+    def _point_transform(self, point, trans, rot):
+        return Point(x=(point.x * np.cos(rot) - point.y * np.sin(rot) + trans.x),
+                    y=(point.x * np.sin(rot) + point.y * np.cos(rot) + trans.y),
+                    z=(point.z + trans.z))
 
     def get_framerate(self, frame_rate):
         if frame_rate <= 0:
@@ -255,13 +260,13 @@ class CatFollower(Node):
                 tf2_ros.ExtrapolationException):
             return
 
-        yaw = _euler(trans.transform.rotation).z
+        yaw = self._euler(trans.transform.rotation).z
 
         goal_x = closest * np.cos(closest_angle)
         goal_y = closest * np.sin(closest_angle)
         goal = Point(x=goal_x, y=goal_y, z=0.0)
 
-        self.goal = point_transform(goal, trans.transform.translation, yaw)
+        self.goal = self._point_transform(goal, trans.transform.translation, yaw)
         self.goal.z = 0.0
         self.marker_maker()
 
