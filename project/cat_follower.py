@@ -231,7 +231,7 @@ class CatFollower(Node):
         # Publish the image
         self.image_publisher.publish(image_msg)
 
-        # TODO: Možda može biti korisno za praćenje mačke
+        # TODO: Možda može biti korisno za praćenje MOUCKE
         # yaw_vel = np.atan((self.u0 - x) / self.f)
         #
         # velocity = Twist()
