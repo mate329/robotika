@@ -41,6 +41,15 @@ def generate_launch_description():
         output='screen'
     )
 
+    camera_turn_on = Node(
+        name='ros2',
+        package='image_tools',
+        executable='cam2images',
+        arguments=['--ros-args']
+        parameters=[{'p': "frequency:=10.0"},
+                    {'p': 'history:=keep_last'}]
+    ),
+
     ld = LaunchDescription()
 
     # Add the commands to the launch description
