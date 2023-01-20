@@ -45,7 +45,7 @@ def generate_launch_description():
         name='ros2',
         package='image_tools',
         executable='cam2images',
-        arguments=['--ros-args']
+        arguments=['--ros-args'],
         parameters=[{'p': "frequency:=10.0"},
                     {'p': 'history:=keep_last'}]
     ),
